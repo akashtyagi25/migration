@@ -1,0 +1,7 @@
+{
+    "name": "migration_factory/ast-service",
+    "description": "PHP AST parsing service for Legacy Migration Factory",
+    "require": {
+        "nikic/php-parser": "^5.0"
+    }
+}
