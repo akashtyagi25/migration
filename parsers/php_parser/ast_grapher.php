@@ -19,6 +19,7 @@ $parser = (new ParserFactory())->createForNewestSupportedVersion();
 
 class DependencyVisitor extends NodeVisitorAbstract {
     public $dependencies = [];
+    public $exported_symbols = [];
 
     public function leaveNode(Node $node) {
         if ($node instanceof Node\Expr\Include_) {
@@ -37,6 +38,29 @@ class DependencyVisitor extends NodeVisitorAbstract {
                 $this->dependencies[] = "[Complex Dynamic Include]";
             }
         }
+        
+        // Smart Chunking: Extract Class and Method signatures
+        if ($node instanceof Node\Stmt\Class_) {
+            $className = $node->name ? $node->name->toString() : 'AnonymousClass';
+            $methods = [];
+            foreach ($node->getMethods() as $method) {
+                $methods[] = $method->name->toString();
+            }
+            $this->exported_symbols[] = [
+                "type" => "class",
+                "name" => $className,
+                "methods" => $methods
+            ];
+        }
+
+        // Smart Chunking: Extract standalone Functions
+        if ($node instanceof Node\Stmt\Function_) {
+            $this->exported_symbols[] = [
+                "type" => "function",
+                "name" => $node->name->toString(),
+                "methods" => []
+            ];
+        }
     }
 }
 
@@ -50,6 +74,7 @@ try {
     echo json_encode([
         "file" => basename($argv[1]),
         "dependencies" => $visitor->dependencies,
+        "exported_symbols" => $visitor->exported_symbols,
         "ast_nodes_parsed" => count($ast)
     ], JSON_PRETTY_PRINT);
 } catch (Error $error) {

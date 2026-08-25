@@ -10,11 +10,20 @@ import (
 	"strings"
 )
 
+// Symbol represents a class or function found in the AST
+type Symbol struct {
+	Type    string   `json:"type"`
+	Name    string   `json:"name"`
+	Methods []string `json:"methods"`
+}
+
+// ASTGraphResult represents the JSON output from the PHP script
 type ASTGraphResult struct {
-	File           string   `json:"file"`
-	Dependencies   []string `json:"dependencies"`
-	AstNodesParsed int      `json:"ast_nodes_parsed"`
-	Error          string   `json:"error,omitempty"`
+	File            string   `json:"file"`
+	Dependencies    []string `json:"dependencies"`
+	ExportedSymbols []Symbol `json:"exported_symbols"`
+	AstNodesParsed  int      `json:"ast_nodes_parsed"`
+	Error           string   `json:"error,omitempty"`
 }
 
 // BuildDependencyGraph runs the PHP AST parser and extracts dependencies deterministically.
@@ -94,7 +103,7 @@ func main() {
 		absTargetFile := filepath.Join(baseLegacyDir, relPath)
 		graph := astDetails[relPath]
 
-		bundledContext, err := BundleContext(absTargetFile, graph, baseLegacyDir)
+		bundledContext, err := BundleContext(absTargetFile, graph, astDetails, baseLegacyDir)
 		if err != nil {
 			log.Fatalf("[FATAL]: Failed to bundle context: %v", err)
 		}
