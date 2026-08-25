@@ -26,19 +26,29 @@ type ASTGraphResult struct {
 	Error           string   `json:"error,omitempty"`
 }
 
-// BuildDependencyGraph runs the PHP AST parser and extracts dependencies deterministically.
-func BuildDependencyGraph(targetFile string, parserScriptPath string) (*ASTGraphResult, error) {
-	fmt.Printf("[Go Engine]: Invoking PHP AST parser on %s...\n", targetFile)
-
-	cmd := exec.Command("php", parserScriptPath, targetFile)
-	cmd.Dir = filepath.Dir(parserScriptPath)
-
+// BuildDependencyGraph routes the file to the correct AST parser based on its extension
+func BuildDependencyGraph(targetFile string, baseDir string) (*ASTGraphResult, error) {
+	ext := strings.ToLower(filepath.Ext(targetFile))
+	var cmd *exec.Cmd
 	absTarget, _ := filepath.Abs(targetFile)
-	cmd.Args = []string{"php", filepath.Base(parserScriptPath), absTarget}
+
+	if ext == ".php" {
+		parserScriptPath := "../parsers/php_parser/ast_grapher.php"
+		fmt.Printf("[Universal Engine]: Invoking PHP AST parser on %s...\n", targetFile)
+		cmd = exec.Command("php", filepath.Base(parserScriptPath), absTarget)
+		cmd.Dir = filepath.Dir(parserScriptPath)
+	} else if ext == ".py" {
+		parserScriptPath := "../parsers/python_parser/ast_grapher.py"
+		fmt.Printf("[Universal Engine]: Invoking Python AST parser on %s...\n", targetFile)
+		cmd = exec.Command("python", filepath.Base(parserScriptPath), absTarget)
+		cmd.Dir = filepath.Dir(parserScriptPath)
+	} else {
+		return nil, fmt.Errorf("unsupported file extension: %s", ext)
+	}
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("PHP AST execution failed: %v, Output: %s", err, string(output))
+		return nil, fmt.Errorf("AST execution failed: %v, Output: %s", err, string(output))
 	}
 
 	var result ASTGraphResult
@@ -59,7 +69,6 @@ func main() {
 	fmt.Println("==================================================")
 
 	baseLegacyDir := "../legacy_app"
-	parserScript := "../parsers/php_parser/ast_grapher.php"
 	outputDir := "../modern_app"
 
 	// 1. Crawl Directory
@@ -70,13 +79,13 @@ func main() {
 	}
 
 	// 2. Build Global Graph
-	fmt.Printf("[Batch Processor]: Found %d PHP files. Building Global AST Graph...\n", len(files))
+	fmt.Printf("[Batch Processor]: Found %d Legacy files. Building Global AST Graph...\n", len(files))
 	globalGraph := make(map[string][]string)
 	astDetails := make(map[string]*ASTGraphResult)
 
 	for _, file := range files {
 		absPath := filepath.Join(baseLegacyDir, file)
-		graph, err := BuildDependencyGraph(absPath, parserScript)
+		graph, err := BuildDependencyGraph(absPath, baseLegacyDir)
 		if err != nil {
 			log.Fatalf("[FATAL]: AST parsing failed for %s: %v", file, err)
 		}
@@ -116,7 +125,7 @@ func main() {
 		for attempt := 1; attempt <= maxRetries; attempt++ {
 			fmt.Printf("--- Agent Attempt %d ---\n", attempt)
 			
-			migratedCode, err := CallLLM(bundledContext, feedbackError)
+			migratedCode, testCode, err := CallLLM(bundledContext, feedbackError)
 			if err != nil {
 				log.Fatalf("[FATAL]: LLM Translation failed: %v", err)
 			}
@@ -126,29 +135,48 @@ func main() {
 			
 			outputFile := filepath.Join(outputDir, "migrated_"+filepath.Base(absTargetFile))
 			outputFile = strings.Replace(outputFile, ".php", ".go", 1)
+			outputFile = strings.Replace(outputFile, ".py", ".go", 1) // For Python files
+
+			testFile := strings.Replace(outputFile, ".go", "_test.go", 1)
 
 			err = os.WriteFile(outputFile, []byte(migratedCode), 0644)
 			if err != nil {
 				log.Fatalf("[FATAL]: Failed to save migrated code: %v", err)
 			}
 
-			// Compile the generated code
+			err = os.WriteFile(testFile, []byte(testCode), 0644)
+			if err != nil {
+				log.Fatalf("[FATAL]: Failed to save test code: %v", err)
+			}
+
+			// 1. Check Syntax (Compile)
 			compileErr := CompileCode(outputDir)
 			if compileErr == nil {
-				finalCode = migratedCode
-				fmt.Printf("[Orchestrator]: SUCCESS! Code is verified and saved to: %s\n", outputFile)
-				
-				fmt.Println("=== PHASE 4: DATA HARVESTING ===")
-				if err := AppendToDataset(bundledContext, finalCode); err != nil {
-					fmt.Printf("[Warning]: Failed to save to dataset: %v\n", err)
+				// 2. Check Logic (Test)
+				testErr := TestCode(outputDir)
+				if testErr == nil {
+					finalCode = migratedCode
+					fmt.Printf("[Orchestrator]: SUCCESS! Code and Logic verified. Saved to: %s\n", outputFile)
+					
+					fmt.Println("=== PHASE 4: DATA HARVESTING ===")
+					if err := AppendToDataset(bundledContext, finalCode); err != nil {
+						fmt.Printf("[Warning]: Failed to save to dataset: %v\n", err)
+					}
+					break
+				} else {
+					feedbackError = testErr.Error()
+					os.Remove(outputFile)
+					os.Remove(testFile)
+					if attempt == maxRetries {
+						log.Fatalf("[FATAL]: LLM failed to fix logic in %s after %d attempts. Last Error: %s", relPath, maxRetries, feedbackError)
+					}
 				}
-				break
 			} else {
 				feedbackError = compileErr.Error()
-				// Remove the broken file so it doesn't break subsequent compiles
 				os.Remove(outputFile)
+				os.Remove(testFile)
 				if attempt == maxRetries {
-					log.Fatalf("[FATAL]: LLM failed to fix %s after %d attempts. Last Error: %s", relPath, maxRetries, feedbackError)
+					log.Fatalf("[FATAL]: LLM failed to fix syntax in %s after %d attempts. Last Error: %s", relPath, maxRetries, feedbackError)
 				}
 			}
 		}

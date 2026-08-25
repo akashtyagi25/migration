@@ -14,7 +14,7 @@ func FindAllPHPFiles(rootDir string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".php") {
+		if !info.IsDir() && (strings.HasSuffix(info.Name(), ".php") || strings.HasSuffix(info.Name(), ".py")) {
 			// Convert to relative path for cleaner graph keys
 			relPath, _ := filepath.Rel(rootDir, path)
 			// Ensure forward slashes for consistency
