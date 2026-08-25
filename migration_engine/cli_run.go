@@ -157,5 +157,5 @@ func init() {
 	runCmd.Flags().StringVarP(&inputDir, "input", "i", "../legacy_app", "Path to legacy codebase")
 	runCmd.Flags().StringVarP(&outputDir, "output", "o", "../modern_app", "Path to save modern code")
 	runCmd.Flags().StringVarP(&modelName, "model", "m", "phi3", "Ollama model name to use")
-	runCmd.Flags().StringVarP(&targetLang, "target", "t", "go", "Target programming language (go, rust, node)")
+	runCmd.Flags().StringVarP(&targetLang, "target", "t", "go", "Target programming language (go, rust, node, python, java, csharp, ruby, cpp)")
 }
