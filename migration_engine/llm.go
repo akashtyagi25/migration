@@ -20,15 +20,15 @@ type OllamaResponse struct {
 
 // CallLLM connects to a LOCAL Ollama instance running on port 11434.
 // This is 100% free and runs offline without any API keys.
-func CallLLM(bundledContext string, feedbackError string) (string, string, error) {
+func CallLLM(bundledContext string, feedbackError string, modelName string, langConfig LangConfig) (string, string, error) {
 	systemPrompt := "You are an Enterprise Migration Agent. \n" +
-		"Translate the target PHP file into modern Go. \n" +
-		"CRITICAL RULE: You MUST output BOTH the main Go code AND the Unit Test (_test.go) code."
+		fmt.Sprintf("Translate the target legacy file into modern %s. \n", langConfig.LanguageName) +
+		fmt.Sprintf("CRITICAL RULE: You MUST output BOTH the main %s code AND the Unit Test (%s) code.", langConfig.LanguageName, langConfig.TestExtension)
 
 	userPrompt := bundledContext
 	if feedbackError != "" {
 		fmt.Println("[LLM Engine (Local)]: Asking Ollama to fix compilation or test error...")
-		userPrompt = fmt.Sprintf("You previously generated code for this context:\n%s\n\nHOWEVER, it failed with this error:\n%s\n\nPlease fix the code and return ONLY the corrected Go code.", bundledContext, feedbackError)
+		userPrompt = fmt.Sprintf("You previously generated code for this context:\n%s\n\nHOWEVER, it failed with this error:\n%s\n\nPlease fix the code and return ONLY the corrected %s code.", bundledContext, feedbackError, langConfig.LanguageName)
 	} else {
 		fmt.Println("[LLM Engine (Local)]: Asking Ollama to translate code and generate tests...")
 	}
@@ -36,7 +36,7 @@ func CallLLM(bundledContext string, feedbackError string) (string, string, error
 	fullPrompt := systemPrompt + "\n\n" + userPrompt
 
 	reqBody := OllamaRequest{
-		Model:  "phi3",
+		Model:  modelName,
 		Prompt: fullPrompt,
 		Stream: false,
 	}
@@ -50,7 +50,7 @@ func CallLLM(bundledContext string, feedbackError string) (string, string, error
 	if err != nil {
 		fmt.Println("[LLM Engine (Local)]: ERROR - Could not connect to Ollama. Make sure it's installed and running!")
 		fmt.Println("[LLM Engine (Local)]: Falling back to simulated successful code AND Test code...")
-		mainMock, testMock := getSimulatedSuccessCode()
+		mainMock, testMock := getSimulatedSuccessCode(langConfig)
 		return mainMock, testMock, nil
 	}
 	defer resp.Body.Close()
@@ -70,7 +70,7 @@ func CallLLM(bundledContext string, feedbackError string) (string, string, error
 	return code, "package main\nimport \"testing\"\nfunc TestDummy(t *testing.T) {}", nil
 }
 
-func getSimulatedSuccessCode() (string, string) {
+func getSimulatedSuccessCode(langConfig LangConfig) (string, string) {
 	mainCode := `package main
 import "fmt"
 type Database interface { GetProductPrice(id int) (float64, error) }

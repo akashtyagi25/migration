@@ -6,12 +6,12 @@ import (
 	"strings"
 )
 
-// CompileCode runs `go build` in the specified directory.
+// CompileCode runs the compiler for the target language.
 // Returns an error containing the stderr output if compilation fails.
-func CompileCode(targetDir string) error {
-	fmt.Println("[Compiler Engine]: Running `go build` to verify syntax...")
+func CompileCode(targetDir string, langConfig LangConfig) error {
+	fmt.Printf("[Compiler Engine]: Running `%s` to verify syntax...\n", strings.Join(langConfig.CompileCmd, " "))
 	
-	cmd := exec.Command("go", "build", ".")
+	cmd := exec.Command(langConfig.CompileCmd[0], langConfig.CompileCmd[1:]...)
 	cmd.Dir = targetDir
 	
 	output, err := cmd.CombinedOutput()
@@ -25,11 +25,11 @@ func CompileCode(targetDir string) error {
 	return nil
 }
 
-// TestCode runs `go test ./...` in the given directory and returns any logic errors
-func TestCode(dir string) error {
-	fmt.Println("[Compiler Engine]: Running `go test` to verify business logic...")
+// TestCode runs tests for the target language and returns any logic errors
+func TestCode(dir string, langConfig LangConfig) error {
+	fmt.Printf("[Compiler Engine]: Running `%s` to verify business logic...\n", strings.Join(langConfig.TestCmd, " "))
 
-	cmd := exec.Command("go", "test", "./...")
+	cmd := exec.Command(langConfig.TestCmd[0], langConfig.TestCmd[1:]...)
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
