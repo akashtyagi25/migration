@@ -84,7 +84,7 @@ func CallLLM(bundledContext string, feedbackError string, modelName string, lang
 	// For tests, Phi3 sometimes groups them or we just use a fallback test for now to keep it simple
 	testCode := extractMarkdownBlock(code, langConfig.TestExtension)
 	if testCode == "" {
-		testCode = "package main\nimport \"testing\"\nfunc TestDummy(t *testing.T) {}"
+		testCode = langConfig.DummyTestCode
 	}
 
 	return mainCode, testCode, nil

@@ -8,10 +8,15 @@ import (
 
 // CompileCode runs the compiler for the target language.
 // Returns an error containing the stderr output if compilation fails.
-func CompileCode(targetDir string, langConfig LangConfig) error {
-	fmt.Printf("[Compiler Engine]: Running `%s` to verify syntax...\n", strings.Join(langConfig.CompileCmd, " "))
+func CompileCode(targetDir string, fileName string, langConfig LangConfig) error {
+	var args []string
+	for _, arg := range langConfig.CompileCmd[1:] {
+		args = append(args, strings.ReplaceAll(arg, "{file}", fileName))
+	}
+
+	fmt.Printf("[Compiler Engine]: Running `%s %s` to verify syntax...\n", langConfig.CompileCmd[0], strings.Join(args, " "))
 	
-	cmd := exec.Command(langConfig.CompileCmd[0], langConfig.CompileCmd[1:]...)
+	cmd := exec.Command(langConfig.CompileCmd[0], args...)
 	cmd.Dir = targetDir
 	
 	output, err := cmd.CombinedOutput()
@@ -29,10 +34,15 @@ func CompileCode(targetDir string, langConfig LangConfig) error {
 }
 
 // TestCode runs tests for the target language and returns any logic errors
-func TestCode(dir string, langConfig LangConfig) error {
-	fmt.Printf("[Compiler Engine]: Running `%s` to verify business logic...\n", strings.Join(langConfig.TestCmd, " "))
+func TestCode(dir string, testFileName string, langConfig LangConfig) error {
+	var args []string
+	for _, arg := range langConfig.TestCmd[1:] {
+		args = append(args, strings.ReplaceAll(arg, "{file}", testFileName))
+	}
 
-	cmd := exec.Command(langConfig.TestCmd[0], langConfig.TestCmd[1:]...)
+	fmt.Printf("[Compiler Engine]: Running `%s %s` to verify business logic...\n", langConfig.TestCmd[0], strings.Join(args, " "))
+
+	cmd := exec.Command(langConfig.TestCmd[0], args...)
 	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()

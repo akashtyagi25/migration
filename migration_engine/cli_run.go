@@ -135,10 +135,10 @@ var runCmd = &cobra.Command{
 				}
 
 				// 1. Check Syntax (Compile)
-				compileErr := CompileCode(outputDir, langConfig)
+				compileErr := CompileCode(outputDir, filepath.Base(outputFile), langConfig)
 				if compileErr == nil {
 					// 2. Check Logic (Test)
-					testErr := TestCode(outputDir, langConfig)
+					testErr := TestCode(outputDir, filepath.Base(testFile), langConfig)
 					if testErr == nil {
 						finalCode = migratedCode
 						fmt.Printf("[Orchestrator]: SUCCESS! Code and Logic verified. Saved to: %s\n", outputFile)

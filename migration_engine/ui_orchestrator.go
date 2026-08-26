@@ -156,9 +156,9 @@ func RunBatchMigrationUI(targetLang string, instructions string) {
 			os.WriteFile(outputFile, []byte(migratedCode), 0644)
 			os.WriteFile(testFile, []byte(testCode), 0644)
 
-			compileErr := CompileCode(outputDir, langConfig)
+			compileErr := CompileCode(outputDir, filepath.Base(outputFile), langConfig)
 			if compileErr == nil {
-				testErr := TestCode(outputDir, langConfig)
+				testErr := TestCode(outputDir, filepath.Base(testFile), langConfig)
 				if testErr == nil {
 					finalCode = migratedCode
 					emitLog(fmt.Sprintf("[Orchestrator]: SUCCESS! Code and Logic verified. Saved to: %s", outputFile))
