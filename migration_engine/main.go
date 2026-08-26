@@ -41,7 +41,8 @@ func BuildDependencyGraph(targetFile string, baseDir string) (*ASTGraphResult, e
 		cmd = exec.Command("python", filepath.Base(parserScriptPath), absTarget)
 		cmd.Dir = filepath.Dir(parserScriptPath)
 	} else {
-		return nil, fmt.Errorf("unsupported file extension: %s", ext)
+		// Use Hybrid Regex Parser for all other languages
+		return ExtractSymbolsUniversal(targetFile, baseDir)
 	}
 
 	output, err := cmd.CombinedOutput()

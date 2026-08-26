@@ -17,6 +17,9 @@ func CompileCode(targetDir string, langConfig LangConfig) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := strings.TrimSpace(string(output))
+		if errorMessage == "" {
+			errorMessage = err.Error()
+		}
 		fmt.Printf("[Compiler Engine]: SYNTAX ERROR DETECTED:\n%s\n", errorMessage)
 		return fmt.Errorf("%s", errorMessage)
 	}

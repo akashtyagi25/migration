@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Tech - Code Migration Factory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-gray-100 font-inter min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <header class="bg-gray-800 border-b border-gray-700 p-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold text-xl shadow-glow">D</div>
+            <h1 class="text-xl font-bold tracking-wide">DeepTech <span class="font-light text-gray-400">Migration Factory</span></h1>
+        </div>
+        <div class="flex space-x-4 text-sm font-medium">
+            <span class="px-3 py-1 bg-green-900/50 text-green-400 rounded-full border border-green-800">Engine: Online</span>
+            <span class="px-3 py-1 bg-blue-900/50 text-blue-400 rounded-full border border-blue-800">Model: phi3</span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 grid grid-cols-12 gap-6 h-full">
+        <!-- Sidebar Controls -->
+        <div class="col-span-3 flex flex-col space-y-6">
+            <div class="glass-panel p-5 rounded-xl border border-gray-700/50">
+                <h2 class="text-lg font-semibold mb-4 text-gray-200 border-b border-gray-700 pb-2">Configuration</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1">Target Language</label>
+                        <select id="targetLang" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm focus:border-blue-500 outline-none transition">
+                            <option value="go">Golang</option>
+                            <option value="rust">Rust</option>
+                            <option value="node">TypeScript</option>
+                            <option value="java">Java 21</option>
+                            <option value="python">Python 3</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase tracking-wider mb-1">Custom Directives</label>
+                        <textarea id="instructions" rows="3" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-sm focus:border-blue-500 outline-none transition" placeholder="e.g. Upgrade to Java 21 using Records..."></textarea>
+                    </div>
+
+                    <button id="startBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg shadow-lg hover:shadow-purple-500/20 transition transform hover:-translate-y-0.5 active:translate-y-0">
+                        🚀 Start Migration
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="glass-panel p-5 rounded-xl border border-gray-700/50 flex-1">
+                <h2 class="text-lg font-semibold mb-4 text-gray-200 border-b border-gray-700 pb-2">Status</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-gray-800/50 p-3 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-blue-400" id="statFiles">0</div>
+                        <div class="text-xs text-gray-500 uppercase">Files</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-3 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-400" id="statPass">0</div>
+                        <div class="text-xs text-gray-500 uppercase">Pass</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-3 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-red-400" id="statFail">0</div>
+                        <div class="text-xs text-gray-500 uppercase">Fail</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-3 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-purple-400" id="statAttempts">0</div>
+                        <div class="text-xs text-gray-500 uppercase">Heals</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Topology & Diff -->
+        <div class="col-span-9 flex flex-col space-y-6">
+            <!-- Topological Graph View -->
+            <div class="glass-panel p-5 rounded-xl border border-gray-700/50 h-64 flex flex-col relative overflow-hidden">
+                <h2 class="text-lg font-semibold mb-2 text-gray-200">Global Dependency Graph</h2>
+                <div class="text-xs text-gray-400 mb-4">Topological Execution Order</div>
+                
+                <div id="graphContainer" class="flex-1 flex flex-wrap gap-3 content-start overflow-y-auto custom-scrollbar">
+                    <!-- Nodes injected here -->
+                    <div class="w-full h-full flex items-center justify-center text-gray-600 italic">
+                        Waiting for scan...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agentic TDD Terminal -->
+            <div class="glass-panel rounded-xl border border-gray-700/50 flex-1 flex flex-col overflow-hidden bg-[#0d1117]">
+                <div class="bg-[#161b22] px-4 py-2 border-b border-gray-700/50 flex items-center space-x-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="ml-4 text-xs font-mono text-gray-400">Agentic TDD Engine Live Feed</span>
+                </div>
+                <div id="terminal" class="flex-1 p-4 overflow-y-auto font-mono text-sm space-y-1 custom-scrollbar">
+                    <div class="text-blue-400">Ready. Awaiting migration job.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

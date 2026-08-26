@@ -7,19 +7,30 @@ import (
 	"strings"
 )
 
-// FindAllPHPFiles recursively finds all .php files in a given directory
-func FindAllPHPFiles(rootDir string) ([]string, error) {
+// FindAllLegacyFiles recursively finds all supported source files in a given directory
+func FindAllLegacyFiles(rootDir string) ([]string, error) {
 	var files []string
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && (strings.HasSuffix(info.Name(), ".php") || strings.HasSuffix(info.Name(), ".py")) {
+		if !info.IsDir() {
+			ext := strings.ToLower(filepath.Ext(info.Name()))
+			
+			// A list of common enterprise languages
+			validExts := map[string]bool{
+				".php": true, ".py": true, ".java": true, ".cs": true, 
+				".ts": true, ".js": true, ".rb": true, ".dart": true, 
+				".cpp": true, ".c": true, ".go": true, ".rs": true,
+			}
+
+			if validExts[ext] {
 			// Convert to relative path for cleaner graph keys
 			relPath, _ := filepath.Rel(rootDir, path)
 			// Ensure forward slashes for consistency
 			relPath = strings.ReplaceAll(relPath, "\\", "/")
-			files = append(files, relPath)
+				files = append(files, relPath)
+			}
 		}
 		return nil
 	})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -11,15 +12,16 @@ import (
 )
 
 var (
-	inputDir   string
-	outputDir  string
-	modelName  string
-	targetLang string
+	inputDir     string
+	outputDir    string
+	modelName    string
+	targetLang   string
+	instructions string
 )
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run the batch migration processor",
+	Short: "Run the migration factory on a legacy codebase",
 	Long:  `Run the batch migration processor to convert legacy code to Go using AI.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("==================================================")
@@ -38,7 +40,7 @@ var runCmd = &cobra.Command{
 
 		// 1. Crawl Directory
 		fmt.Println("[Batch Processor]: Scanning legacy codebase...")
-		files, err := FindAllPHPFiles(inputDir) // We can rename this later to FindAllLegacyFiles
+		files, err := FindAllLegacyFiles(inputDir)
 		if err != nil {
 			log.Fatalf("[FATAL]: Failed to scan directory: %v", err)
 		}
@@ -72,10 +74,22 @@ var runCmd = &cobra.Command{
 		fmt.Println("============================================\n")
 
 		// 4. Batch Process Each File
+		os.RemoveAll(outputDir)
+		os.MkdirAll(outputDir, 0755)
+		if targetLang == "go" {
+			cmd := exec.Command("go", "mod", "init", "modern_app")
+			cmd.Dir = outputDir
+			cmd.Run()
+		}
+
 		for _, relPath := range sortedFiles {
 			fmt.Printf("\n>>> MIGRATING: %s <<<\n", relPath)
 			absTargetFile := filepath.Join(inputDir, relPath)
 			graph := astDetails[relPath]
+			if graph == nil {
+				fmt.Printf("[Warning]: Skipping %s (Invalid file or external dependency)\n", relPath)
+				continue
+			}
 
 			bundledContext, err := BundleContext(absTargetFile, graph, astDetails, inputDir)
 			if err != nil {
@@ -89,10 +103,16 @@ var runCmd = &cobra.Command{
 
 			for attempt := 1; attempt <= maxRetries; attempt++ {
 				fmt.Printf("--- Agent Attempt %d ---\n", attempt)
-				
-				migratedCode, testCode, err := CallLLM(bundledContext, feedbackError, modelName, langConfig)
+				migratedCode, testCode, err := CallLLM(bundledContext, feedbackError, modelName, langConfig, instructions)
 				if err != nil {
 					log.Fatalf("[FATAL]: LLM Translation failed: %v", err)
+				}
+				if strings.TrimSpace(migratedCode) == "" {
+					fmt.Println("[Compile Failed]: LLM returned completely empty code. The model might be failing or context is too large.")
+					if attempt == maxRetries {
+						log.Fatalf("[FATAL]: LLM failed to fix logic in %s after %d attempts. Last Error: Empty Code", relPath, maxRetries)
+					}
+					continue
 				}
 
 				// Clean old files before compiling the new one to prevent conflicts
@@ -130,16 +150,20 @@ var runCmd = &cobra.Command{
 						break
 					} else {
 						feedbackError = testErr.Error()
+						
 						os.Remove(outputFile)
 						os.Remove(testFile)
+
 						if attempt == maxRetries {
 							log.Fatalf("[FATAL]: LLM failed to fix logic in %s after %d attempts. Last Error: %s", relPath, maxRetries, feedbackError)
 						}
 					}
 				} else {
 					feedbackError = compileErr.Error()
+					
 					os.Remove(outputFile)
 					os.Remove(testFile)
+
 					if attempt == maxRetries {
 						log.Fatalf("[FATAL]: LLM failed to fix syntax in %s after %d attempts. Last Error: %s", relPath, maxRetries, feedbackError)
 					}
@@ -158,4 +182,5 @@ func init() {
 	runCmd.Flags().StringVarP(&outputDir, "output", "o", "../modern_app", "Path to save modern code")
 	runCmd.Flags().StringVarP(&modelName, "model", "m", "phi3", "Ollama model name to use")
 	runCmd.Flags().StringVarP(&targetLang, "target", "t", "go", "Target programming language (go, rust, node, python, java, csharp, ruby, cpp)")
+	runCmd.Flags().StringVarP(&instructions, "instructions", "p", "", "Custom instructions for the AI (e.g. Version upgrades, specific frameworks)")
 }

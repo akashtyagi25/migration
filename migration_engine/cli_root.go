@@ -15,6 +15,16 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(serveCmd)
+}
+
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the Web UI Dashboard",
+	Run: func(cmd *cobra.Command, args []string) {
+		port := "8080"
+		StartAPIServer(port)
+	},
 }
 
 // Execute runs the root CLI command
